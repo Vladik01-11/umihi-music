@@ -86,6 +86,7 @@ fun PlaylistScreen(
     val isLoggedIn = uiState.isLoggedIn
     var addToPlaylistSong by remember { mutableStateOf<Song?>(null) }
     var songToRemove by remember { mutableStateOf<Song?>(null) }
+    var songToRemoveDownload by remember { mutableStateOf<Song?>(null) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
@@ -338,6 +339,11 @@ fun PlaylistScreen(
                                         download = {
                                             playlistViewModel.downloadSong(song)
                                         },
+                                        removeDownload = if (song.downloaded) {
+                                            { songToRemoveDownload = song }
+                                        } else {
+                                            null
+                                        },
                                         addToPlaylist = if (isLoggedIn) {
                                             { addToPlaylistSong = song }
                                         } else {
@@ -381,5 +387,16 @@ fun PlaylistScreen(
             onDismiss = { songToRemove = null }
         )
     }
-}
 
+    songToRemoveDownload?.let { song ->
+        ConfirmDialog(
+            title = stringResource(R.string.remove_download),
+            text = stringResource(R.string.remove_song_download_confirm_text),
+            onConfirm = {
+                playlistViewModel.deleteSongDownload(song)
+                songToRemoveDownload = null
+            },
+            onDismiss = { songToRemoveDownload = null }
+        )
+    }
+}

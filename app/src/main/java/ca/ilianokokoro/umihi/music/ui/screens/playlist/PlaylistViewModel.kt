@@ -340,6 +340,13 @@ class PlaylistViewModel(
         }
     }
 
+    fun deleteSongDownload(song: Song) {
+        viewModelScope.launch {
+            downloadRepository.deleteSongDownload(song)
+            getPlaylistInfoAsync()
+        }
+    }
+
     fun removeSongFromPlaylist(song: Song) {
         viewModelScope.launch {
             try {

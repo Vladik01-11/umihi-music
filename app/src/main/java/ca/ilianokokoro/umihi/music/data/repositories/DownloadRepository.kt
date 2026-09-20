@@ -108,6 +108,19 @@ class DownloadRepository(appContext: Context) {
         }
     }
 
+    suspend fun deleteSongDownload(song: Song) = withContext(Dispatchers.IO) {
+        val localSong = localSongRepository.getSong(song.youtubeId) ?: return@withContext
+
+        FileHelper.deleteStoredFile(_appContext, localSong.audioFilePath)
+        FileHelper.deleteStoredFile(_appContext, localSong.thumbnailPath)
+        localSongRepository.create(
+            localSong.copy(
+                audioFilePath = null,
+                thumbnailPath = null,
+            )
+        )
+    }
+
     fun cancelPlaylistDownload(playlist: Playlist) {
         printd("stopping work ${playlist.info.title}")
         workManager.cancelUniqueWork(playlist.info.id)
