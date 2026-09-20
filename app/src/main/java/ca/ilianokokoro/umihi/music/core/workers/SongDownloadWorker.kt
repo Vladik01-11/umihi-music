@@ -13,6 +13,8 @@ import ca.ilianokokoro.umihi.music.core.managers.NotificationManager
 import ca.ilianokokoro.umihi.music.data.database.AppDatabase
 import ca.ilianokokoro.umihi.music.data.repositories.SongRepository
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
@@ -28,49 +30,55 @@ class SongDownloadWorker(
 
     override suspend fun doWork(): Result {
         val playlistId = params.inputData.getString(PLAYLIST_KEY)
-            ?: return Result.failure()
 
         val songId = params.inputData.getString(SONG_KEY)
             ?: return Result.failure()
 
-        val playlist = playlistRepository.getPlaylistById(playlistId)
-            ?: return Result.failure()
+        val playlist = playlistId?.let { playlistRepository.getPlaylistById(it) }
 
         val song = localSongRepository.getSong(songId)
             ?: return Result.failure()
 
         return try {
-            val playlistImage = DownloadHelper.downloadImage(
-                appContext,
-                playlist.info.coverHref,
-                playlist.info.id
-            )
-
-            playlistRepository.insertPlaylist(
-                playlist.info.copy(
-                    coverPath = playlistImage?.path
+            if (playlist != null) {
+                val playlistImage = DownloadHelper.downloadImage(
+                    appContext,
+                    playlist.info.coverHref,
+                    playlist.info.id
                 )
-            )
+
+                playlistRepository.insertPlaylist(
+                    playlist.info.copy(
+                        coverPath = playlistImage?.path
+                    )
+                )
+            }
 
             val fullSongData = songRepository
                 .getSongInfo(song.youtubeId)
-                .first { it is ApiResult.Success }
+                .first { it !is ApiResult.Loading }
+
+            if (fullSongData is ApiResult.Error) {
+                throw fullSongData.exception
+            }
 
             val fullSong = (fullSongData as ApiResult.Success).data
 
             val audioPath = DownloadHelper.downloadAudio(appContext, song)
+                ?: throw java.io.IOException("Audio download failed")
 
             val thumbnailPath = DownloadHelper.downloadImage(
                 appContext,
                 fullSong.thumbnailHref,
                 song.youtubeId
-            )
+            ) ?: throw java.io.IOException("Thumbnail download failed")
 
             val updatedSong = song.copy(
-                thumbnailPath = thumbnailPath?.path,
+                thumbnailPath = thumbnailPath.path,
                 audioFilePath = audioPath,
             )
 
+            currentCoroutineContext().ensureActive()
             localSongRepository.create(updatedSong)
 
             NotificationManager.showSongDownloadSuccess(appContext, song)

@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="remove_song_download_confirm_text">Удалить скачанную копию «%1$s» с устройства? Она станет недоступна офлайн во всех плейлистах.</string>
+    <string name="song_download_action_failed">Не удалось изменить загрузку песни. Попробуйте ещё раз.</string>
     <string name="playlists">Плейлисты</string>
     <string name="settings">Настройки</string>
     <string name="back_description">Предыдущий экран</string>

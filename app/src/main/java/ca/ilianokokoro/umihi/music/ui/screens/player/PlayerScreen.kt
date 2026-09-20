@@ -52,6 +52,7 @@ import ca.ilianokokoro.umihi.music.ui.components.bottomsheet.SleepTimerBottomShe
 import ca.ilianokokoro.umihi.music.ui.components.bottomsheet.SpeedSelectorBottomSheet
 import ca.ilianokokoro.umihi.music.ui.components.bottomsheet.VolumeBottomSheet
 import ca.ilianokokoro.umihi.music.ui.components.song.ExplicitBadge
+import ca.ilianokokoro.umihi.music.ui.components.song.SongDownloadAction
 import ca.ilianokokoro.umihi.music.ui.screens.player.components.PlayerControls
 
 @Composable
@@ -286,11 +287,7 @@ fun SongInfo(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column(
-            modifier = if (isLoggedIn) {
-                Modifier.weight(1f)
-            } else {
-                Modifier.fillMaxWidth()
-            },
+            modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(4.dp),
             horizontalAlignment = Alignment.Start
         ) {
@@ -316,6 +313,8 @@ fun SongInfo(
                 modifier = Modifier.basicMarquee()
             )
         }
+
+        song?.let { SongDownloadAction(it) }
 
         if (isLoggedIn) {
             Box(modifier = Modifier.padding(start = 8.dp)) {

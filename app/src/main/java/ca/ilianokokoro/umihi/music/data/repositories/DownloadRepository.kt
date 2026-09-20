@@ -1,6 +1,8 @@
 package ca.ilianokokoro.umihi.music.data.repositories
 
 import android.content.Context
+import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
@@ -19,13 +21,69 @@ import ca.ilianokokoro.umihi.music.models.Playlist
 import ca.ilianokokoro.umihi.music.models.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.IOException
 
 class DownloadRepository(appContext: Context) {
     private val _appContext = appContext
     private val workManager: WorkManager = WorkManager.getInstance(_appContext)
     private val localPlaylistRepository = AppDatabase.getInstance(_appContext).playlistRepository()
     private val localSongRepository = AppDatabase.getInstance(_appContext).songRepository()
+
+    private fun songWorkName(songId: String) = "standalone-song:$songId"
+
+    fun observeSongWork(songId: String): Flow<List<WorkInfo>> =
+        workManager.getWorkInfosForUniqueWorkFlow(songWorkName(songId))
+
+    suspend fun downloadSong(song: Song) = withContext(Dispatchers.IO) {
+        val saved = localSongRepository.getSong(song.youtubeId)
+        if (saved?.downloaded == true) return@withContext
+        if (getExistingJobs(songWorkName(song.youtubeId)).isNotEmpty()) return@withContext
+        localSongRepository.create(saved ?: song.copy(audioFilePath = null, thumbnailPath = null))
+        val settings = DatastoreRepository(_appContext).getSettings()
+        val request = OneTimeWorkRequestBuilder<SongDownloadWorker>()
+            .setInputData(workDataOf(SongDownloadWorker.SONG_KEY to song.youtubeId))
+            .setConstraints(
+                Constraints(
+                    requiredNetworkType = if (settings.downloadOnMetered) NetworkType.CONNECTED else NetworkType.UNMETERED,
+                    requiresStorageNotLow = true
+                )
+            ).build()
+        workManager.enqueueUniqueWork(songWorkName(song.youtubeId), ExistingWorkPolicy.KEEP, request)
+            .result.get()
+        if (!settings.downloadOnMetered && ConnectivityHelper.isMeteredNetwork(_appContext)) {
+            NotificationManager.showSongDownloadWaitingForWifi(_appContext, song)
+        }
+    }
+
+    suspend fun cancelSongDownload(songId: String) = withContext(Dispatchers.IO) {
+        workManager.cancelUniqueWork(songWorkName(songId)).result.get()
+        observeSongWork(songId).first { infos -> infos.all { it.state.isFinished } }
+        Unit
+    }
+
+    suspend fun deleteSongDownload(songId: String) = withContext(Dispatchers.IO) {
+        val song = localSongRepository.getSong(songId) ?: return@withContext
+        deleteDownloadFile(song.audioFilePath)
+        deleteDownloadFile(song.thumbnailPath)
+        localSongRepository.clearDownload(songId)
+    }
+
+    private fun deleteDownloadFile(path: String?) {
+        if (path.isNullOrBlank()) return
+        val uri = path.toUri()
+        val deleted = if (uri.scheme == "content") {
+            val document = DocumentFile.fromSingleUri(_appContext, uri)
+                ?: throw IOException("Cannot access downloaded file")
+            !document.exists() || document.delete()
+        } else {
+            val file = File(if (uri.scheme == "file") requireNotNull(uri.path) else path)
+            !file.exists() || file.delete()
+        }
+        if (!deleted) throw IOException("Cannot delete downloaded file")
+    }
 
     suspend fun downloadPlaylist(playlist: Playlist, useMetered: Boolean = false) {
         val existingWork = getExistingJobs(playlist.info.id)

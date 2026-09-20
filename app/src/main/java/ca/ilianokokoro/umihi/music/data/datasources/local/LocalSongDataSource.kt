@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Query
 import androidx.room.Upsert
 import ca.ilianokokoro.umihi.music.models.Song
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface LocalSongDataSource {
@@ -52,6 +53,12 @@ interface LocalSongDataSource {
 
     @Query("SELECT * FROM songs WHERE youtubeId = :songId")
     suspend fun getSong(songId: String): Song?
+
+    @Query("SELECT * FROM songs WHERE youtubeId = :songId")
+    fun observeSong(songId: String): Flow<Song?>
+
+    @Query("UPDATE songs SET audioFilePath = NULL, thumbnailPath = NULL WHERE youtubeId = :songId")
+    suspend fun clearDownload(songId: String)
 
     @Query("SELECT * FROM songs WHERE youtubeId IN (:songIds)")
     suspend fun getSongsByYoutubeIds(songIds: List<String>): List<Song>

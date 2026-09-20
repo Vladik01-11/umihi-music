@@ -78,6 +78,8 @@
     <string name="cancel_playlist_download">Cancel Playlist Download</string>
     <string name="cancel_playlist_download_text">Cancel the ongoing playlist download ?</string>
     <string name="remove_download">Remove Download</string>
+    <string name="remove_song_download_confirm_text">Delete the downloaded copy of %1$s from this device? This affects offline access in all playlists.</string>
+    <string name="song_download_action_failed">Could not update the song download. Please try again.</string>
     <string name="cancel_download">Cancel Download</string>
     <string name="hide_playlist">Hide Playlist</string>
     <string name="unhide_playlist">Unhide Playlist</string>

@@ -46,6 +46,7 @@ fun SongListItem(
     download: (() -> Unit)? = null,
     addToPlaylist: (() -> Unit)? = null,
     removeFromPlaylist: (() -> Unit)? = null,
+    downloadAction: (@Composable () -> Unit)? = null,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -111,7 +112,8 @@ fun SongListItem(
                         }
                     )
                 }
-                if (download != null && !song.downloaded) {
+                downloadAction?.invoke()
+                if (downloadAction == null && download != null && !song.downloaded) {
                     MaterialUDropdownItem(
                         leadingIcon = Icons.Rounded.Download,
                         text = stringResource(R.string.download),

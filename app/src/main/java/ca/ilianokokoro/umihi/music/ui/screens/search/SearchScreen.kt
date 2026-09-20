@@ -39,6 +39,7 @@ import ca.ilianokokoro.umihi.music.ui.components.LoadingAnimation
 import ca.ilianokokoro.umihi.music.ui.components.SearchBar
 import ca.ilianokokoro.umihi.music.ui.components.bottomsheet.addtoplaylist.AddToPlaylistBottomSheet
 import ca.ilianokokoro.umihi.music.ui.components.song.SongListItem
+import ca.ilianokokoro.umihi.music.ui.components.song.SongDownloadAction
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -150,6 +151,7 @@ fun SearchScreenContent(
                             }) { index, song ->
                             SongListItem(
                                 song = song,
+                                downloadAction = { SongDownloadAction(song, inMenu = true) },
                                 onPress = {
                                     PlayerManager.playQueue(
                                         mediaItems = songs.map { it.mediaItem },
