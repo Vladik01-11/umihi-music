@@ -85,8 +85,9 @@ class PlayerViewModel(application: Application) :
         }
 
         viewModelScope.launch {
-            val settings = datastoreRepository.getSettings()
-            _uiState.update { it.copy(isLoggedIn = !settings.cookies.isEmpty()) }
+            datastoreRepository.cookies.collect { cookies ->
+                _uiState.update { it.copy(isLoggedIn = cookies.isNotEmpty()) }
+            }
         }
     }
 
