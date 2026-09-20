@@ -59,6 +59,7 @@ import ca.ilianokokoro.umihi.music.ui.components.SearchBar
 import ca.ilianokokoro.umihi.music.ui.components.bottomsheet.addtoplaylist.AddToPlaylistBottomSheet
 import ca.ilianokokoro.umihi.music.ui.components.dialog.ConfirmDialog
 import ca.ilianokokoro.umihi.music.ui.components.song.SongListItem
+import ca.ilianokokoro.umihi.music.ui.components.song.SongDownloadAction
 import ca.ilianokokoro.umihi.music.ui.navigation.viewmodels.SharedViewModel
 import ca.ilianokokoro.umihi.music.ui.screens.playlist.components.PlaylistHeader
 
@@ -338,6 +339,9 @@ fun PlaylistScreen(
                                         download = {
                                             playlistViewModel.downloadSong(song)
                                         },
+                                        downloadAction = if (playlistInfo.isDownloadedPlaylist) {
+                                            { SongDownloadAction(song, inMenu = true) }
+                                        } else null,
                                         addToPlaylist = if (isLoggedIn) {
                                             { addToPlaylistSong = song }
                                         } else {
@@ -382,4 +386,3 @@ fun PlaylistScreen(
         )
     }
 }
-

@@ -9,6 +9,11 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface LocalSongDataSource {
+    @Query("SELECT * FROM songs WHERE audioFilePath IS NOT NULL AND thumbnailPath IS NOT NULL ORDER BY title COLLATE NOCASE ASC, artist COLLATE NOCASE ASC")
+    fun observeDownloadedSongs(): Flow<List<Song>>
+
+    @Query("SELECT COUNT(*) FROM songs WHERE audioFilePath IS NOT NULL AND thumbnailPath IS NOT NULL")
+    fun observeDownloadedCount(): Flow<Int>
     @Upsert
     suspend fun create(song: Song)
 

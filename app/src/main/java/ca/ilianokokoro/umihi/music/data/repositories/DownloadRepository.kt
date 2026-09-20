@@ -23,14 +23,36 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
 
 class DownloadRepository(appContext: Context) {
+    companion object {
+        private val notificationScope = kotlinx.coroutines.CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + Dispatchers.IO
+        )
+        private var observingDownloads = false
+    }
     private val _appContext = appContext
     private val workManager: WorkManager = WorkManager.getInstance(_appContext)
     private val localPlaylistRepository = AppDatabase.getInstance(_appContext).playlistRepository()
     private val localSongRepository = AppDatabase.getInstance(_appContext).songRepository()
+
+    init {
+        synchronized(DownloadRepository::class.java) {
+            if (!observingDownloads) {
+                observingDownloads = true
+                val context = appContext.applicationContext
+                notificationScope.launch {
+                    WorkManager.getInstance(context).getWorkInfosByTagFlow("standalone-song-download")
+                        .collect { infos ->
+                            NotificationManager.showSongDownloadsRemaining(context, infos.count { !it.state.isFinished })
+                        }
+                }
+            }
+        }
+    }
 
     private fun songWorkName(songId: String) = "standalone-song:$songId"
 
@@ -44,6 +66,7 @@ class DownloadRepository(appContext: Context) {
         localSongRepository.create(saved ?: song.copy(audioFilePath = null, thumbnailPath = null))
         val settings = DatastoreRepository(_appContext).getSettings()
         val request = OneTimeWorkRequestBuilder<SongDownloadWorker>()
+            .addTag("standalone-song-download")
             .setInputData(workDataOf(SongDownloadWorker.SONG_KEY to song.youtubeId))
             .setConstraints(
                 Constraints(
@@ -61,8 +84,10 @@ class DownloadRepository(appContext: Context) {
     suspend fun cancelSongDownload(songId: String) = withContext(Dispatchers.IO) {
         workManager.cancelUniqueWork(songWorkName(songId)).result.get()
         observeSongWork(songId).first { infos -> infos.all { it.state.isFinished } }
+        NotificationManager.cancelSongDownloadNotification(songId)
         Unit
     }
+
 
     suspend fun deleteSongDownload(songId: String) = withContext(Dispatchers.IO) {
         val song = localSongRepository.getSong(songId) ?: return@withContext

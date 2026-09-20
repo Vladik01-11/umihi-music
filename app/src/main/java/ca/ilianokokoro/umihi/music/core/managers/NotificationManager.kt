@@ -231,6 +231,36 @@ object NotificationManager {
         androidNotificationManager.notify(getNotificationID(song.youtubeId), notification)
     }
 
+    fun showSongDownloadProgress(context: Context, song: Song, bytes: Long, total: Long) {
+        val percent = if (total > 0) (100.0 * bytes / total).toInt().coerceIn(0, 100) else 0
+        val notification = getBaseNotification(context, NotificationChannels.SONG_DOWNLOAD)
+            .setContentTitle(song.title)
+            .setContentText(context.getString(R.string.song_download_progress, percent))
+            .setSmallIcon(android.R.drawable.stat_sys_download)
+            .setProgress(100, percent, total <= 0)
+            .setOngoing(true).setOnlyAlertOnce(true)
+            .setGroup(NotificationChannels.SONG_DOWNLOAD.group).build()
+        androidNotificationManager.notify(getNotificationID(song.youtubeId), notification)
+    }
+
+    fun showSongDownloadsRemaining(context: Context, remaining: Int) {
+        if (remaining == 0) {
+            androidNotificationManager.cancel(2)
+            return
+        }
+        val notification = getBaseNotification(context, NotificationChannels.SONG_DOWNLOAD)
+            .setContentTitle(context.getString(R.string.download))
+            .setContentText(context.getString(R.string.song_downloads_remaining, remaining))
+            .setSmallIcon(android.R.drawable.stat_sys_download)
+            .setOngoing(true).setOnlyAlertOnce(true)
+            .setGroup(NotificationChannels.SONG_DOWNLOAD.group).setGroupSummary(true).build()
+        androidNotificationManager.notify(2, notification)
+    }
+
+    fun cancelSongDownloadNotification(songId: String) {
+        androidNotificationManager.cancel(getNotificationID(songId))
+    }
+
     private fun getBaseNotification(
         context: Context,
         channel: NotificationChannels

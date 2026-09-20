@@ -9,6 +9,7 @@ import ca.ilianokokoro.umihi.music.core.youtube.YoutubeDataExtractor
 import ca.ilianokokoro.umihi.music.models.Song
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import java.io.File
@@ -81,7 +82,8 @@ object DownloadHelper {
     suspend fun downloadAudio(
         context: Context,
         song: Song,
-        retries: Int = Constants.YoutubeApi.RETRY_COUNT
+        retries: Int = Constants.YoutubeApi.RETRY_COUNT,
+        onProgress: suspend (Long, Long) -> Unit = { _, _ -> }
     ): String? = withContext(Dispatchers.IO) {
         val audioDir = UmihiHelper.getDownloadDirectory(
             context,
@@ -124,7 +126,24 @@ object DownloadHelper {
 
                         body.byteStream().use { input ->
                             FileOutputStream(tempFile).use { output ->
-                                input.copyTo(output)
+                                val buffer = ByteArray(64 * 1024)
+                                var downloaded = 0L
+                                var lastUpdate = 0L
+                                val total = body.contentLength()
+                                onProgress(0, total)
+                                while (true) {
+                                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                                    val count = input.read(buffer)
+                                    if (count < 0) break
+                                    output.write(buffer, 0, count)
+                                    downloaded += count
+                                    val now = android.os.SystemClock.elapsedRealtime()
+                                    if (now - lastUpdate >= 1000) {
+                                        onProgress(downloaded, total)
+                                        lastUpdate = now
+                                    }
+                                }
+                                onProgress(downloaded, total)
                             }
                         }
                     }

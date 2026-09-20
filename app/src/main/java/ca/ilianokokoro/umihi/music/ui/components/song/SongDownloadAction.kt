@@ -29,6 +29,7 @@ import ca.ilianokokoro.umihi.music.ui.components.dialog.ConfirmDialog
 import ca.ilianokokoro.umihi.music.ui.components.materialu.dropdown.MaterialUDropdownItem
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.map
 
 @Composable
 fun SongDownloadAction(song: Song, inMenu: Boolean = false) {
@@ -36,14 +37,14 @@ fun SongDownloadAction(song: Song, inMenu: Boolean = false) {
     val repository = remember(context) { DownloadRepository(context) }
     val songFlow = remember(context, song.youtubeId) {
         AppDatabase.getInstance(context).songRepository().observeSong(song.youtubeId)
+            .map { it?.downloaded == true }
     }
     val workFlow = remember(repository, song.youtubeId) {
         repository.observeSongWork(song.youtubeId)
     }
-    val saved by songFlow.collectAsStateWithLifecycle(initialValue = null)
+    val downloaded by songFlow.collectAsStateWithLifecycle(initialValue = false)
     val work by workFlow.collectAsStateWithLifecycle(initialValue = emptyList())
     val downloading = work.any { !it.state.isFinished }
-    val downloaded = saved?.downloaded == true
     var confirming by remember(song.youtubeId) { mutableStateOf(false) }
     var busy by remember(song.youtubeId) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()

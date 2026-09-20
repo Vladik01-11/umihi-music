@@ -32,6 +32,20 @@ class HomeViewModel(private val application: Application) : AndroidViewModel(app
 
     init {
         getPlaylists()
+        viewModelScope.launch {
+            ca.ilianokokoro.umihi.music.data.database.AppDatabase.getInstance(application)
+                .songRepository().observeDownloadedCount().collect { count ->
+                    _uiState.update { state ->
+                        val screen = state.screenState as? ScreenState.LoggedIn
+                            ?: return@update state
+                        state.copy(screenState = screen.copy(
+                            playlistInfos = screen.playlistInfos.map { info ->
+                                if (info.isDownloadedPlaylist) info.copy(songCount = count) else info
+                            }
+                        ))
+                    }
+                }
+        }
     }
 
     fun getPlaylists() {

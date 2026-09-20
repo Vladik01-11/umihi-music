@@ -25,6 +25,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import ca.ilianokokoro.umihi.music.data.database.AppDatabase
+import kotlinx.coroutines.flow.map
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -49,6 +53,12 @@ fun SongListItem(
     downloadAction: (@Composable () -> Unit)? = null,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current.applicationContext
+    val downloadedFlow = remember(context, song.youtubeId) {
+        AppDatabase.getInstance(context).songRepository().observeSong(song.youtubeId)
+            .map { it?.downloaded == true }
+    }
+    val downloaded by downloadedFlow.collectAsStateWithLifecycle(initialValue = song.downloaded)
 
     ListItem(
         modifier = modifier
@@ -130,7 +140,7 @@ fun SongListItem(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
-                if (song.downloaded) {
+                if (downloaded) {
                     Icon(
                         modifier = Modifier.size(16.dp),
                         imageVector = Icons.Rounded.DownloadForOffline,

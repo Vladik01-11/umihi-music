@@ -29,6 +29,7 @@ class SongDownloadWorker(
     private val songRepository = SongRepository()
 
     override suspend fun doWork(): Result {
+        ca.ilianokokoro.umihi.music.data.repositories.DownloadRepository(appContext)
         val playlistId = params.inputData.getString(PLAYLIST_KEY)
 
         val songId = params.inputData.getString(SONG_KEY)
@@ -64,7 +65,10 @@ class SongDownloadWorker(
 
             val fullSong = (fullSongData as ApiResult.Success).data
 
-            val audioPath = DownloadHelper.downloadAudio(appContext, song)
+            NotificationManager.showSongDownloadProgress(appContext, fullSong, 0, -1)
+            val audioPath = DownloadHelper.downloadAudio(appContext, fullSong, onProgress = { bytes, total ->
+                NotificationManager.showSongDownloadProgress(appContext, fullSong, bytes, total)
+            })
                 ?: throw java.io.IOException("Audio download failed")
 
             val thumbnailPath = DownloadHelper.downloadImage(
@@ -73,7 +77,8 @@ class SongDownloadWorker(
                 song.youtubeId
             ) ?: throw java.io.IOException("Thumbnail download failed")
 
-            val updatedSong = song.copy(
+            val updatedSong = fullSong.copy(
+                uid = song.uid,
                 thumbnailPath = thumbnailPath.path,
                 audioFilePath = audioPath,
             )
@@ -81,7 +86,7 @@ class SongDownloadWorker(
             currentCoroutineContext().ensureActive()
             localSongRepository.create(updatedSong)
 
-            NotificationManager.showSongDownloadSuccess(appContext, song)
+            NotificationManager.showSongDownloadSuccess(appContext, updatedSong)
 
             Result.success()
         } catch (_: CancellationException) {
