@@ -339,7 +339,7 @@ fun PlaylistScreen(
                                         download = {
                                             playlistViewModel.downloadSong(song)
                                         },
-                                        downloadAction = if (playlistInfo.isDownloadedPlaylist) {
+                                        downloadAction = if (playlistInfo.info.isDownloadedPlaylist) {
                                             { SongDownloadAction(song, inMenu = true) }
                                         } else null,
                                         addToPlaylist = if (isLoggedIn) {
