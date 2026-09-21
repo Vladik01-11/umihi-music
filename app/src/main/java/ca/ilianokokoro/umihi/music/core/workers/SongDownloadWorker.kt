@@ -18,6 +18,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
+import java.io.IOException
 
 class SongDownloadWorker(
     private val appContext: Context,
@@ -29,13 +30,14 @@ class SongDownloadWorker(
     private val songRepository = SongRepository()
 
     override suspend fun doWork(): Result {
-        ca.ilianokokoro.umihi.music.data.repositories.DownloadRepository(appContext)
+        NotificationManager.observeSongDownloads(appContext)
         val playlistId = params.inputData.getString(PLAYLIST_KEY)
 
         val songId = params.inputData.getString(SONG_KEY)
             ?: return Result.failure()
 
         val playlist = playlistId?.let { playlistRepository.getPlaylistById(it) }
+        if (playlistId != null && playlist == null) return Result.failure()
 
         val song = localSongRepository.getSong(songId)
             ?: return Result.failure()
@@ -69,16 +71,17 @@ class SongDownloadWorker(
             val audioPath = DownloadHelper.downloadAudio(appContext, fullSong, onProgress = { bytes, total ->
                 NotificationManager.showSongDownloadProgress(appContext, fullSong, bytes, total)
             })
-                ?: throw java.io.IOException("Audio download failed")
+                ?: throw IOException("Audio download failed")
 
             val thumbnailPath = DownloadHelper.downloadImage(
                 appContext,
                 fullSong.thumbnailHref,
                 song.youtubeId
-            ) ?: throw java.io.IOException("Thumbnail download failed")
+            ) ?: throw IOException("Thumbnail download failed")
 
             val updatedSong = fullSong.copy(
                 uid = song.uid,
+                isLiked = fullSong.isLiked ?: song.isLiked,
                 thumbnailPath = thumbnailPath.path,
                 audioFilePath = audioPath,
             )
@@ -90,6 +93,7 @@ class SongDownloadWorker(
 
             Result.success()
         } catch (_: CancellationException) {
+            NotificationManager.cancelSongDownloadNotification(songId)
             val isUserCancelled = withContext(NonCancellable) {
                 try {
                     WorkManager.getInstance(appContext)
@@ -121,6 +125,7 @@ class SongDownloadWorker(
     }
 
     companion object {
+        const val DOWNLOAD_TAG = "standalone-song-download"
         const val PLAYLIST_KEY = "playlist"
         const val SONG_KEY = "song"
     }

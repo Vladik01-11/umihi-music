@@ -11,6 +11,7 @@ import ca.ilianokokoro.umihi.music.R
 import ca.ilianokokoro.umihi.music.core.ApiResult
 import ca.ilianokokoro.umihi.music.core.Constants
 import ca.ilianokokoro.umihi.music.core.helpers.LogHelper.printe
+import ca.ilianokokoro.umihi.music.data.database.AppDatabase
 import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository
 import ca.ilianokokoro.umihi.music.data.repositories.PlaylistRepository
 import ca.ilianokokoro.umihi.music.models.PlaylistInfo
@@ -33,16 +34,18 @@ class HomeViewModel(private val application: Application) : AndroidViewModel(app
     init {
         getPlaylists()
         viewModelScope.launch {
-            ca.ilianokokoro.umihi.music.data.database.AppDatabase.getInstance(application)
+            AppDatabase.getInstance(application)
                 .songRepository().observeDownloadedCount().collect { count ->
                     _uiState.update { state ->
                         val screen = state.screenState as? ScreenState.LoggedIn
                             ?: return@update state
-                        state.copy(screenState = screen.copy(
-                            playlistInfos = screen.playlistInfos.map { info ->
-                                if (info.isDownloadedPlaylist) info.copy(songCount = count) else info
-                            }
-                        ))
+                        state.copy(
+                            screenState = screen.copy(
+                                playlistInfos = screen.playlistInfos.map { info ->
+                                    if (info.isDownloadedPlaylist) info.copy(songCount = count) else info
+                                }
+                            )
+                        )
                     }
                 }
         }

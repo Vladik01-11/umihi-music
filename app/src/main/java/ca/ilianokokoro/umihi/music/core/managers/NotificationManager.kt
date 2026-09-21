@@ -10,13 +10,26 @@ import ca.ilianokokoro.umihi.music.R
 import ca.ilianokokoro.umihi.music.core.helpers.LogHelper.printe
 import ca.ilianokokoro.umihi.music.models.Playlist
 import ca.ilianokokoro.umihi.music.models.Song
+import ca.ilianokokoro.umihi.music.core.workers.SongDownloadWorker
+import androidx.work.WorkManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import android.app.NotificationManager as AndroidNotificationManager
 
 object NotificationManager {
+    private const val SONG_DOWNLOAD_SUMMARY_ID = 2
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var downloadsJob: Job? = null
     private lateinit var androidNotificationManager: AndroidNotificationManager
     private lateinit var pendingIntent: PendingIntent
 
+    @Synchronized
     fun init(context: Context) {
         val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
         pendingIntent = PendingIntent.getActivity(
@@ -42,6 +55,19 @@ object NotificationManager {
             }
         } else {
             printe("Could not start the notification channels because the android version is too old")
+        }
+    }
+
+    @Synchronized
+    fun observeSongDownloads(context: Context) {
+        if (downloadsJob?.isActive == true) return
+        val appContext = context.applicationContext
+        init(appContext)
+        downloadsJob = scope.launch {
+            WorkManager.getInstance(appContext).getWorkInfosByTagFlow(SongDownloadWorker.DOWNLOAD_TAG)
+                .map { infos -> infos.count { !it.state.isFinished } }
+                .distinctUntilChanged()
+                .collect { remaining -> showSongDownloadsRemaining(appContext, remaining) }
         }
     }
 
@@ -238,23 +264,28 @@ object NotificationManager {
             .setContentText(context.getString(R.string.song_download_progress, percent))
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setProgress(100, percent, total <= 0)
-            .setOngoing(true).setOnlyAlertOnce(true)
-            .setGroup(NotificationChannels.SONG_DOWNLOAD.group).build()
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setGroup(NotificationChannels.SONG_DOWNLOAD.group)
+            .build()
         androidNotificationManager.notify(getNotificationID(song.youtubeId), notification)
     }
 
     fun showSongDownloadsRemaining(context: Context, remaining: Int) {
         if (remaining == 0) {
-            androidNotificationManager.cancel(2)
+            androidNotificationManager.cancel(SONG_DOWNLOAD_SUMMARY_ID)
             return
         }
         val notification = getBaseNotification(context, NotificationChannels.SONG_DOWNLOAD)
             .setContentTitle(context.getString(R.string.download))
             .setContentText(context.getString(R.string.song_downloads_remaining, remaining))
             .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setOngoing(true).setOnlyAlertOnce(true)
-            .setGroup(NotificationChannels.SONG_DOWNLOAD.group).setGroupSummary(true).build()
-        androidNotificationManager.notify(2, notification)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setGroup(NotificationChannels.SONG_DOWNLOAD.group)
+            .setGroupSummary(true)
+            .build()
+        androidNotificationManager.notify(SONG_DOWNLOAD_SUMMARY_ID, notification)
     }
 
     fun cancelSongDownloadNotification(songId: String) {

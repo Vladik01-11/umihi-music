@@ -53,6 +53,7 @@ import ca.ilianokokoro.umihi.music.ui.components.bottomsheet.SpeedSelectorBottom
 import ca.ilianokokoro.umihi.music.ui.components.bottomsheet.VolumeBottomSheet
 import ca.ilianokokoro.umihi.music.ui.components.song.ExplicitBadge
 import ca.ilianokokoro.umihi.music.ui.components.song.SongDownloadAction
+import androidx.compose.runtime.key
 import ca.ilianokokoro.umihi.music.ui.screens.player.components.PlayerControls
 
 @Composable
@@ -314,7 +315,11 @@ fun SongInfo(
             )
         }
 
-        song?.let { SongDownloadAction(it) }
+        song?.let {
+            key(it.youtubeId) {
+                SongDownloadAction(it)
+            }
+        }
 
         if (isLoggedIn) {
             Box(modifier = Modifier.padding(start = 8.dp)) {

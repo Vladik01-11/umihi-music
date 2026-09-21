@@ -59,8 +59,8 @@ interface LocalSongDataSource {
     @Query("SELECT * FROM songs WHERE youtubeId = :songId")
     suspend fun getSong(songId: String): Song?
 
-    @Query("SELECT * FROM songs WHERE youtubeId = :songId")
-    fun observeSong(songId: String): Flow<Song?>
+    @Query("SELECT EXISTS(SELECT 1 FROM songs WHERE youtubeId = :songId AND audioFilePath IS NOT NULL AND thumbnailPath IS NOT NULL)")
+    fun observeDownloaded(songId: String): Flow<Boolean>
 
     @Query("UPDATE songs SET audioFilePath = NULL, thumbnailPath = NULL WHERE youtubeId = :songId")
     suspend fun clearDownload(songId: String)

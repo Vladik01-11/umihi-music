@@ -29,15 +29,15 @@ import ca.ilianokokoro.umihi.music.ui.components.dialog.ConfirmDialog
 import ca.ilianokokoro.umihi.music.ui.components.materialu.dropdown.MaterialUDropdownItem
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.map
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 @Composable
 fun SongDownloadAction(song: Song, inMenu: Boolean = false) {
     val context = LocalContext.current.applicationContext
     val repository = remember(context) { DownloadRepository(context) }
     val songFlow = remember(context, song.youtubeId) {
-        AppDatabase.getInstance(context).songRepository().observeSong(song.youtubeId)
-            .map { it?.downloaded == true }
+        AppDatabase.getInstance(context).songRepository().observeDownloaded(song.youtubeId)
     }
     val workFlow = remember(repository, song.youtubeId) {
         repository.observeSongWork(song.youtubeId)
@@ -89,7 +89,11 @@ fun SongDownloadAction(song: Song, inMenu: Boolean = false) {
     if (inMenu) {
         MaterialUDropdownItem(leadingIcon = icon, text = label, onClick = onClick)
     } else {
-        IconButton(onClick = onClick, enabled = !busy) {
+        IconButton(
+            onClick = onClick,
+            enabled = !busy,
+            modifier = Modifier.semantics { contentDescription = label }
+        ) {
             if (downloading || busy) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
             } else {
