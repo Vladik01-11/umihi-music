@@ -239,7 +239,7 @@ object NotificationManager {
         androidNotificationManager.notify(getNotificationID(song.youtubeId), notification)
     }
 
-    suspend fun showSongDownloadSuccess(
+    fun showSongDownloadSuccess(
         context: Context,
         song: Song,
     ) {
@@ -247,9 +247,9 @@ object NotificationManager {
             .setContentTitle(song.title)
             .setContentText(context.getString(R.string.song_downloaded))
             .setSmallIcon(android.R.drawable.stat_sys_download_done)
-            .setLargeIcon(song.getThumbnailBitmap())
             .setAutoCancel(true)
-            .setGroup(NotificationChannels.SONG_DOWNLOAD.group)
+            .setOngoing(false)
+            .setProgress(0, 0, false)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
