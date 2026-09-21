@@ -69,7 +69,6 @@ class PlaylistViewModel(
         observeLoginState()
         viewModelScope.launch {
             getPlaylistInfoAsync()
-            downloadPlaylistIfNeeded()
             observerDownloadJob()
         }
     }
@@ -83,17 +82,6 @@ class PlaylistViewModel(
     }
 
     private fun observeSongDownloads() {
-        if (playlistInfo.isDownloadedPlaylist) {
-            viewModelScope.launch {
-                AppDatabase.getInstance(application).songRepository().observeDownloadedSongs()
-                    .collect { songs ->
-                        _uiState.update { state ->
-                            state.copy(screenState = ScreenState.Success(Playlist(playlistInfo, songs)))
-                        }
-                    }
-            }
-            return
-        }
         viewModelScope.launch {
             localPlaylistRepository.observePlaylistById(playlistInfo.id).collect { localPlaylist ->
                 if (localPlaylist != null) {
@@ -198,18 +186,6 @@ class PlaylistViewModel(
 
             val settings = datastoreRepository.getSettings()
             downloadRepository.downloadPlaylist(playlist, settings.downloadOnMetered)
-        }
-    }
-
-    private fun downloadPlaylistIfNeeded() {
-        viewModelScope.launch {
-            val isLocallyDownloaded = localPlaylistRepository
-                .getPlaylistById(playlistInfo.id)
-                ?.songs
-                ?.isNotEmpty() == true
-            if (isLocallyDownloaded) {
-                downloadPlaylist()
-            }
         }
     }
 

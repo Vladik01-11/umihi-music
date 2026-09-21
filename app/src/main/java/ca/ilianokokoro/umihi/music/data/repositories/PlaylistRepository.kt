@@ -265,16 +265,16 @@ class PlaylistRepository(application: Application) {
             )
         }.flowOn(Dispatchers.IO)
     }
-    private fun mergeWithLocal(remotePlaylist: Playlist, localPlaylist: Playlist?): Playlist {
-        if (localPlaylist == null) {
-            return remotePlaylist
-        }
-        val localMap = localPlaylist.songs.associateBy { it.youtubeId }
+    private suspend fun mergeWithLocal(remotePlaylist: Playlist, localPlaylist: Playlist?): Playlist {
+        val localMap = localPlaylist?.songs
+            ?.associateBy { it.youtubeId }
+            ?: emptyMap()
         val mergedSongs = remotePlaylist.songs.map { remoteSong ->
             val localCopy = localMap[remoteSong.youtubeId]?.let { localSong ->
                 localSong.copy(
                     uid = Uuid.random().toString(),
                     isExplicit = remoteSong.isExplicit || localSong.isExplicit,
+                    isLiked = localSong.isLiked ?: remoteSong.isLiked,
                 )
             }
             if (localCopy != null) {
@@ -285,7 +285,9 @@ class PlaylistRepository(application: Application) {
             }
         }
         return remotePlaylist.copy(
-            info = remotePlaylist.info.copy(hidden = localPlaylist.info.hidden),
+            info = remotePlaylist.info.copy(
+                hidden = localPlaylist?.info?.hidden ?: remotePlaylist.info.hidden
+            ),
             songs = mergedSongs
         )
     }
@@ -308,6 +310,7 @@ class PlaylistRepository(application: Application) {
                 audioFilePath = saved.audioFilePath ?: song.audioFilePath,
                 streamUrl = saved.streamUrl ?: song.streamUrl,
                 isLiked = saved.isLiked ?: song.isLiked,
+                isExplicit = saved.isExplicit || song.isExplicit,
             )
         }
 

@@ -17,6 +17,7 @@ import ca.ilianokokoro.umihi.music.core.Constants
 import ca.ilianokokoro.umihi.music.core.helpers.LogHelper.printe
 import ca.ilianokokoro.umihi.music.core.managers.PlayerManager
 import ca.ilianokokoro.umihi.music.core.youtube.YoutubeApiClient
+import ca.ilianokokoro.umihi.music.data.database.AppDatabase
 import ca.ilianokokoro.umihi.music.data.repositories.DatastoreRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +36,7 @@ class PlayerViewModel(application: Application) :
     val playbackProgress = _playbackProgress.asStateFlow()
 
     private val datastoreRepository = DatastoreRepository(application)
+    private val localSongs = AppDatabase.getInstance(application).songRepository()
 
     init {
         PlayerManager.currentController?.addListener(object : Player.Listener {
@@ -116,7 +118,21 @@ class PlayerViewModel(application: Application) :
                     settings
                 )
 
+                if (localSongs.getSong(currentSong.youtubeId) == null) {
+                    localSongs.create(currentSong.copy(isLiked = newLiked))
+                } else {
+                if (localSongs.getSong(currentSong.youtubeId) == null) {
+                    localSongs.create(currentSong.copy(isLiked = newLiked))
+                } else {
+                    localSongs.setLiked(currentSong.youtubeId, newLiked)
+                }
+                }
+
+
                 _uiState.update { state ->
+                    if (state.queue.getOrNull(state.currentIndex)?.youtubeId != currentSong.youtubeId) {
+                        return@update state.copy(isLiking = false)
+                    }
                     val updatedQueue = state.queue.toMutableList().apply {
                         val index = state.currentIndex
                         if (index in indices) {

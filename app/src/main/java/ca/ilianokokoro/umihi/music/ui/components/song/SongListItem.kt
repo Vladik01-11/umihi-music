@@ -56,7 +56,7 @@ fun SongListItem(
     val downloadedFlow = remember(context, song.youtubeId) {
         AppDatabase.getInstance(context).songRepository().observeDownloaded(song.youtubeId)
     }
-    val downloaded by downloadedFlow.collectAsStateWithLifecycle(initialValue = song.downloaded)
+    val downloaded by downloadedFlow.collectAsStateWithLifecycle(initialValue = false)
 
     ListItem(
         modifier = modifier

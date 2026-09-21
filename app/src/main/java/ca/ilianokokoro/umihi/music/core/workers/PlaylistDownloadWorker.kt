@@ -78,9 +78,9 @@ class PlaylistDownloadWorker(
                                     .getSongInfo(song.youtubeId)
                                     .first { it is ApiResult.Success }
 
-                                val fullSong = (fullSongData as ApiResult.Success).data
+                                val fullSong = song.withDownloadMetadata((fullSongData as ApiResult.Success).data)
 
-                                val audioPath = DownloadHelper.downloadAudio(appContext, song)
+                                val audioPath = DownloadHelper.downloadAudio(appContext, fullSong)
 
                                 val thumbnailPath = DownloadHelper.downloadImage(
                                     appContext,
@@ -88,7 +88,8 @@ class PlaylistDownloadWorker(
                                     song.youtubeId
                                 )
 
-                                val updatedSong = song.copy(
+                                val updatedSong = fullSong.copy(
+                                    uid = song.uid,
                                     thumbnailPath = thumbnailPath?.path,
                                     audioFilePath = audioPath,
                                 )

@@ -9,8 +9,10 @@ import androidx.media3.session.MediaConstants
 import ca.ilianokokoro.umihi.music.core.Constants
 import ca.ilianokokoro.umihi.music.models.Song
 
-val MediaMetadata.isLiked: Boolean
-    get() = (userRating as? HeartRating)?.isHeart == true
+val MediaMetadata.isLiked: Boolean?
+    get() = (userRating as? HeartRating)?.let { rating ->
+        rating.isHeart.takeIf { rating.isRated }
+    }
 
 @OptIn(UnstableApi::class)
 fun MediaItem?.toSong(): Song {
