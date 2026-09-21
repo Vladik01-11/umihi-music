@@ -315,10 +315,17 @@ fun PlaylistScreen(
                                     }
                                 }
 
+                                val occurrences = mutableMapOf<String, Int>()
+                                val songKeys = filteredSongs.map { song ->
+                                    val occurrence = occurrences.getOrDefault(song.youtubeId, 0)
+                                    occurrences[song.youtubeId] = occurrence + 1
+                                    "${song.youtubeId}:$occurrence"
+                                }
+
                                 itemsIndexed(
                                     items = filteredSongs,
-                                    key = { index, song ->
-                                        "${song.youtubeId}:$index"
+                                    key = { index, _ ->
+                                        songKeys[index]
                                     }
                                 ) { _, song ->
                                     SongListItem(

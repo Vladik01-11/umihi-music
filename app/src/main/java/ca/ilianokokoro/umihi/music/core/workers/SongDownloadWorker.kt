@@ -65,7 +65,7 @@ class SongDownloadWorker(
                 throw fullSongData.exception
             }
 
-            val fullSong = (fullSongData as ApiResult.Success).data
+            val fullSong = song.withDownloadMetadata((fullSongData as ApiResult.Success).data)
 
             NotificationManager.showSongDownloadProgress(appContext, fullSong, 0, -1)
             val audioPath = DownloadHelper.downloadAudio(appContext, fullSong, onProgress = { bytes, total ->
@@ -81,7 +81,6 @@ class SongDownloadWorker(
 
             val updatedSong = fullSong.copy(
                 uid = song.uid,
-                isLiked = fullSong.isLiked ?: song.isLiked,
                 thumbnailPath = thumbnailPath.path,
                 audioFilePath = audioPath,
             )

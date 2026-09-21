@@ -136,6 +136,18 @@ data class Song(
         return this.youtubeId == other.youtubeId
     }
 
+    fun withDownloadMetadata(details: Song): Song {
+        require(details.youtubeId == youtubeId) { "Song metadata ID mismatch" }
+        return copy(
+            title = title.ifBlank { details.title },
+            artist = artist.ifBlank { details.artist },
+            duration = duration.takeUnless { it.isBlank() || it == "0:00" } ?: details.duration,
+            thumbnailHref = details.thumbnailHref.ifBlank { thumbnailHref },
+            isExplicit = isExplicit || details.isExplicit,
+            isLiked = isLiked ?: details.isLiked,
+        ).also { it.setVideoId = setVideoId }
+    }
+
     companion object {
         fun createFromYoutubeUrl(url: String): Song {
             return Song(youtubeId = url.removePrefix(Constants.YoutubeApi.YOUTUBE_URL_PREFIX))
@@ -144,5 +156,4 @@ data class Song(
     }
 
 }
-
 

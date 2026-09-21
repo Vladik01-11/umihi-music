@@ -271,7 +271,12 @@ class PlaylistRepository(application: Application) {
         }
         val localMap = localPlaylist.songs.associateBy { it.youtubeId }
         val mergedSongs = remotePlaylist.songs.map { remoteSong ->
-            val localCopy = localMap[remoteSong.youtubeId]?.copy(uid = Uuid.random().toString())
+            val localCopy = localMap[remoteSong.youtubeId]?.let { localSong ->
+                localSong.copy(
+                    uid = Uuid.random().toString(),
+                    isExplicit = remoteSong.isExplicit || localSong.isExplicit,
+                )
+            }
             if (localCopy != null) {
                 remoteSong.setVideoId?.let { localCopy.setVideoId = it }
                 localCopy

@@ -443,8 +443,11 @@ class PlaylistViewModel(
         }
         val localMap = updatedPlaylist.songs.associateBy { it.youtubeId }
         val mergedSongs = oldPlaylist.songs.map { remoteSong ->
-            localMap[remoteSong.youtubeId]?.copy(uid = Uuid.random().toString())
-                ?: remoteSong
+            val localSong = localMap[remoteSong.youtubeId] ?: return@map remoteSong
+            localSong.copy(
+                uid = Uuid.random().toString(),
+                isExplicit = remoteSong.isExplicit || localSong.isExplicit,
+            ).also { it.setVideoId = remoteSong.setVideoId }
         }
         return oldPlaylist.copy(songs = mergedSongs)
     }

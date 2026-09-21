@@ -41,7 +41,10 @@ class DownloadRepository(appContext: Context) {
         val saved = localSongRepository.getSong(song.youtubeId)
         if (saved?.downloaded == true) return@withContext
         if (getExistingJobs(songWorkName(song.youtubeId)).isNotEmpty()) return@withContext
-        localSongRepository.create(saved ?: song.copy(audioFilePath = null, thumbnailPath = null))
+        localSongRepository.create(
+            saved?.withDownloadMetadata(song)
+                ?: song.copy(audioFilePath = null, thumbnailPath = null)
+        )
         val settings = DatastoreRepository(_appContext).getSettings()
         val request = OneTimeWorkRequestBuilder<SongDownloadWorker>()
             .addTag(SongDownloadWorker.DOWNLOAD_TAG)
