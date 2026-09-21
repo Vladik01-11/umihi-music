@@ -266,9 +266,9 @@ class PlaylistRepository(application: Application) {
         }.flowOn(Dispatchers.IO)
     }
     private suspend fun mergeWithLocal(remotePlaylist: Playlist, localPlaylist: Playlist?): Playlist {
-        val localMap = localPlaylist?.songs
-            ?.associateBy { it.youtubeId }
-            ?: emptyMap()
+        val localMap = localSongDataSource.getSongsByYoutubeIds(
+            remotePlaylist.songs.map { it.youtubeId }
+        ).associateBy { it.youtubeId }
         val mergedSongs = remotePlaylist.songs.map { remoteSong ->
             val localCopy = localMap[remoteSong.youtubeId]?.let { localSong ->
                 localSong.copy(

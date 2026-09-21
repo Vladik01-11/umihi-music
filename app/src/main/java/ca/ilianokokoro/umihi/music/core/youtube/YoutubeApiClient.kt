@@ -345,11 +345,12 @@ object YoutubeApiClient {
         )
     }
 
-    suspend fun search(query: String): String {
+    suspend fun search(query: String, settings: UmihiSettings? = null): String {
         return requestWithContext(
             url = Constants.YoutubeApi.Search.URL,
             idName = "query",
-            id = query
+            id = query,
+            settings = settings,
         )
     }
 

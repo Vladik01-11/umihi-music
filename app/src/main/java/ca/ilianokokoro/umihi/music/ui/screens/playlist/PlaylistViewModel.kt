@@ -82,6 +82,17 @@ class PlaylistViewModel(
     }
 
     private fun observeSongDownloads() {
+        if (playlistInfo.isDownloadedPlaylist) {
+            viewModelScope.launch {
+                AppDatabase.getInstance(application).songRepository().observeDownloadedSongs()
+                    .collect { songs ->
+                        _uiState.update { state ->
+                            state.copy(screenState = ScreenState.Success(Playlist(playlistInfo, songs)))
+                        }
+                    }
+            }
+            return
+        }
         viewModelScope.launch {
             localPlaylistRepository.observePlaylistById(playlistInfo.id).collect { localPlaylist ->
                 if (localPlaylist != null) {

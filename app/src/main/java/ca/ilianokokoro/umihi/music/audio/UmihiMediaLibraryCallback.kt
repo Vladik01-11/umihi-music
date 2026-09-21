@@ -262,7 +262,10 @@ class UmihiMediaLibraryCallback(
     private suspend fun performSearch(query: String): List<Song> {
         return try {
             val searchResult = withTimeout(3.seconds) {
-                songRepository.search(query).first { it !is ApiResult.Loading }
+                songRepository.search(
+                    query = query,
+                    settings = datastoreRepository.getSettings(),
+                ).first { it !is ApiResult.Loading }
             }
             if (searchResult is ApiResult.Success) {
                 searchResult.data

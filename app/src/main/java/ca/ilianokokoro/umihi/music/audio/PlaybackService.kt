@@ -59,7 +59,7 @@ class PlaybackService : MediaLibraryService() {
     private lateinit var sessionPlayer: Player
     private lateinit var datastoreRepository: DatastoreRepository
     private var currentAudioSessionId = C.AUDIO_SESSION_ID_UNSET
-    private val songRepository = SongRepository()
+    private val songRepository = SongRepository(this)
     private lateinit var playlistRepository: PlaylistRepository
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var loudnessEnhancer: LoudnessEnhancer? = null

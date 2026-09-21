@@ -981,16 +981,7 @@ object YoutubeDataExtractor {
                     ?.contentOrNull == "MUSIC_EXPLICIT_BADGE"
             } ?: false
 
-        val isLiked = songContent["menu"]
-            ?.safeObject()?.get("menuRenderer")
-            ?.safeObject()?.get("topLevelButtons")
-            ?.safeArray()
-            ?.firstOrNull { item ->
-                item.safeObject()?.get("likeButtonRenderer") != null
-            }
-            ?.safeObject()?.get("likeButtonRenderer")
-            ?.safeObject()?.get("likeStatus")
-            ?.jsonPrimitive?.contentOrNull == "LIKE"
+        val isLiked = extractLikeStatus(songContent)
 
         return Song(
             youtubeId = videoId,
@@ -1004,6 +995,47 @@ object YoutubeDataExtractor {
             song.setVideoId = setVideoId
         }
 
+    }
+
+    private fun extractLikeStatus(value: JsonElement?): Boolean? {
+        when (value) {
+            is JsonObject -> {
+                val likeToggle = value["toggleMenuServiceItemRenderer"]
+                    ?.safeObject()
+                    ?.takeIf { renderer ->
+                        val defaultIcon = renderer["defaultIcon"]
+                            ?.safeObject()
+                            ?.get("iconType")
+                            ?.jsonPrimitive
+                            ?.contentOrNull
+                        val toggledIcon = renderer["toggledIcon"]
+                            ?.safeObject()
+                            ?.get("iconType")
+                            ?.jsonPrimitive
+                            ?.contentOrNull
+                        defaultIcon == "FAVORITE" || toggledIcon == "UNFAVORITE"
+                    }
+                likeToggle?.get("isToggled")
+                    ?.jsonPrimitive
+                    ?.booleanOrNull
+                    ?.let { return it }
+
+                when (value["likeStatus"]?.jsonPrimitive?.contentOrNull) {
+                    "LIKE" -> return true
+                    "DISLIKE", "INDIFFERENT" -> return false
+                }
+                value.values.forEach { child ->
+                    extractLikeStatus(child)?.let { return it }
+                }
+            }
+
+            is JsonArray -> value.forEach { child ->
+                extractLikeStatus(child)?.let { return it }
+            }
+
+            else -> Unit
+        }
+        return null
     }
 
     private fun extractRemovalSetVideoId(element: JsonElement): String? {

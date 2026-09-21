@@ -20,7 +20,7 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
     val uiState = _uiState.asStateFlow()
 
     private val datastoreRepository = DatastoreRepository(application)
-    val songRepository = SongRepository()
+    val songRepository = SongRepository(application)
 
     init {
         observeLoginState()
@@ -47,7 +47,10 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
                 return@launch
             }
 
-            songRepository.search(_uiState.value.search).collect { apiResult ->
+            songRepository.search(
+                query = _uiState.value.search,
+                settings = datastoreRepository.getSettings(),
+            ).collect { apiResult ->
                 _uiState.update {
                     _uiState.value.copy(
                         screenState = when (apiResult) {

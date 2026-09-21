@@ -121,13 +121,8 @@ class PlayerViewModel(application: Application) :
                 if (localSongs.getSong(currentSong.youtubeId) == null) {
                     localSongs.create(currentSong.copy(isLiked = newLiked))
                 } else {
-                if (localSongs.getSong(currentSong.youtubeId) == null) {
-                    localSongs.create(currentSong.copy(isLiked = newLiked))
-                } else {
                     localSongs.setLiked(currentSong.youtubeId, newLiked)
                 }
-                }
-
 
                 _uiState.update { state ->
                     if (state.queue.getOrNull(state.currentIndex)?.youtubeId != currentSong.youtubeId) {
@@ -224,12 +219,9 @@ class PlayerViewModel(application: Application) :
             val mergedQueue = freshQueue.map { freshSong ->
                 state.queue.find { it.youtubeId == freshSong.youtubeId }
                     ?.let { existing ->
-                        if (existing.isLiked != freshSong.isLiked) {
-                            freshSong.copy(isLiked = existing.isLiked)
-                        } else {
-                            freshSong
-                        }
-                    } ?: freshSong
+                        freshSong.copy(isLiked = existing.isLiked ?: freshSong.isLiked)
+                    }
+                    ?: freshSong
             }
 
             state.copy(
@@ -245,12 +237,9 @@ class PlayerViewModel(application: Application) :
             val mergedQueue = PlayerManager.getQueue().map { freshSong ->
                 state.queue.find { it.youtubeId == freshSong.youtubeId }
                     ?.let { existing ->
-                        if (existing.isLiked != freshSong.isLiked) {
-                            freshSong.copy(isLiked = existing.isLiked)
-                        } else {
-                            freshSong
-                        }
-                    } ?: freshSong
+                        freshSong.copy(isLiked = existing.isLiked ?: freshSong.isLiked)
+                    }
+                    ?: freshSong
             }
 
             state.copy(
