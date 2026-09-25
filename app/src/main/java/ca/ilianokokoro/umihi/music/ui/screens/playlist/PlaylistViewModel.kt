@@ -71,10 +71,10 @@ class PlaylistViewModel(
     init {
         observeSongDownloads()
         observeLoginState()
+        observerDownloadJob()
         viewModelScope.launch {
             getPlaylistInfoAsync()
             // downloadPlaylistIfNeeded() Disabled for now (TODO : just make it silent)
-            observerDownloadJob()
         }
     }
 
@@ -111,33 +111,35 @@ class PlaylistViewModel(
         }
     }
 
-    suspend fun observerDownloadJob() {
-        val playlist = getPlaylist() ?: return
-        val existingJobFlow = downloadRepository.getExistingJobFlow(playlist)
+    fun observerDownloadJob() {
+        viewModelScope.launch {
+            val existingJobFlow = downloadRepository.getExistingJobFlow(playlistInfo.id)
 
-        existingJobFlow.collect { workInfos ->
-            val workInfo = workInfos.firstOrNull() ?: return@collect
+            existingJobFlow.collect { workInfos ->
+                val workInfo = workInfos.firstOrNull()
 
-            _uiState.update {
-                it.copy(
-                    isDownloading =
-                        workInfo.state == WorkInfo.State.ENQUEUED ||
-                                workInfo.state == WorkInfo.State.RUNNING ||
-                                workInfo.state == WorkInfo.State.BLOCKED
-                )
-            }
-
-            when (workInfo.state) {
-                WorkInfo.State.SUCCEEDED -> {
-                    printd("Download finished for ${playlist.info.title}")
+                _uiState.update {
+                    it.copy(
+                        isDownloading =
+                            workInfo != null &&
+                                    (workInfo.state == WorkInfo.State.ENQUEUED ||
+                                            workInfo.state == WorkInfo.State.RUNNING ||
+                                            workInfo.state == WorkInfo.State.BLOCKED)
+                    )
                 }
 
-                WorkInfo.State.FAILED,
-                WorkInfo.State.CANCELLED -> {
-                    printd("Download failed or cancelled for ${playlist.info.title}")
-                }
+                when (workInfo?.state) {
+                    WorkInfo.State.SUCCEEDED -> {
+                        printd("Download finished for ${playlistInfo.title}")
+                    }
 
-                else -> {}
+                    WorkInfo.State.FAILED,
+                    WorkInfo.State.CANCELLED -> {
+                        printd("Download failed or cancelled for ${playlistInfo.title}")
+                    }
+
+                    else -> {}
+                }
             }
         }
     }

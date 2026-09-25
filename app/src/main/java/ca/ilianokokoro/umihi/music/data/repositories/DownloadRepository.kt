@@ -127,9 +127,8 @@ class DownloadRepository(appContext: Context) {
         workManager.cancelAllWork()
     }
 
-    fun getExistingJobFlow(playlist: Playlist): Flow<List<WorkInfo>> {
-        return workManager.getWorkInfosForUniqueWorkFlow(playlist.info.id)
-
+    fun getExistingJobFlow(playlistId: String): Flow<List<WorkInfo>> {
+        return workManager.getWorkInfosForUniqueWorkFlow(playlistId)
     }
 
     private fun getExistingJobs(id: String): List<WorkInfo> {
