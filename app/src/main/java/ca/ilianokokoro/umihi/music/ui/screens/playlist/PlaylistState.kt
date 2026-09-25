@@ -7,13 +7,11 @@ import ca.ilianokokoro.umihi.music.models.PlaylistInfo
 data class PlaylistState(
     val screenState: ScreenState,
     val isRefreshing: Boolean = false,
-    // True while WorkManager reports an actual ENQUEUED/RUNNING/BLOCKED job.
+    // True while the playlist download worker is actually running.
     val isWorkManagerActive: Boolean = false,
-    // True as soon as the locally stored playlist is flagged to be downloaded
-    // and isn't fully downloaded yet. Available instantly from the local DB,
-    // so the UI doesn't have to wait for WorkManager to catch up (e.g. right
-    // after the app was force-stopped and WorkManager needs a moment to
-    // reschedule the interrupted job) before it stops offering "Download".
+    // True after a download is requested in the current ViewModel before the
+    // worker starts running. This state is intentionally not restored from
+    // the local database after an app restart.
     val isDownloadPending: Boolean = false,
     val loadedSongsCount: Int = 0,
     val searchQuery: String = "",

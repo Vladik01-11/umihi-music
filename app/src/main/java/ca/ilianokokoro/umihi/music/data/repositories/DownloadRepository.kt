@@ -27,11 +27,11 @@ class DownloadRepository(appContext: Context) {
     private val localPlaylistRepository = AppDatabase.getInstance(_appContext).playlistRepository()
     private val localSongRepository = AppDatabase.getInstance(_appContext).songRepository()
 
-    suspend fun downloadPlaylist(playlist: Playlist, useMetered: Boolean = false) {
+    suspend fun downloadPlaylist(playlist: Playlist, useMetered: Boolean = false): Boolean {
         val existingWork = getExistingJobs(playlist.info.id)
         if (existingWork.isNotEmpty()) {
             printd("Download is already ongoing for playlist ${playlist.info.title}")
-            return
+            return false
         }
         localPlaylistRepository.insertPlaylistWithSongs(
             playlist.copy(
@@ -55,6 +55,8 @@ class DownloadRepository(appContext: Context) {
         if (!useMetered && ConnectivityHelper.isMeteredNetwork(_appContext)) {
             NotificationManager.showPlaylistDownloadWaitingForWifi(_appContext, playlist)
         }
+
+        return true
     }
 
     suspend fun deletePlaylist(context: Context, playlist: Playlist) = withContext(Dispatchers.IO) {

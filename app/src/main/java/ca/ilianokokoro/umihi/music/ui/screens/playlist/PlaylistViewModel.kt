@@ -104,11 +104,7 @@ class PlaylistViewModel(
                         }
 
                     currentState.copy(
-                        screenState = mergedScreenState,
-                        isDownloadPending = localPlaylist != null &&
-                                localPlaylist.info.shouldBeDownloaded &&
-                                localPlaylist.songs.isNotEmpty() &&
-                                localPlaylist.songs.any { !it.downloaded }
+                        screenState = mergedScreenState
                     )
                 }
             }
@@ -125,22 +121,20 @@ class PlaylistViewModel(
 
                 _uiState.update {
                     it.copy(
-                        isWorkManagerActive =
-                            workInfo != null &&
-                                    (workInfo.state == WorkInfo.State.ENQUEUED ||
-                                            workInfo.state == WorkInfo.State.RUNNING ||
-                                            workInfo.state == WorkInfo.State.BLOCKED)
+                        isWorkManagerActive = workInfo?.state == WorkInfo.State.RUNNING
                     )
                 }
 
                 when (workInfo?.state) {
                     WorkInfo.State.SUCCEEDED -> {
                         printd("Download finished for ${playlistInfo.title}")
+                        _uiState.update { it.copy(isDownloadPending = false) }
                     }
 
                     WorkInfo.State.FAILED,
                     WorkInfo.State.CANCELLED -> {
                         printd("Download failed or cancelled for ${playlistInfo.title}")
+                        _uiState.update { it.copy(isDownloadPending = false) }
                     }
 
                     else -> {}
@@ -197,7 +191,10 @@ class PlaylistViewModel(
             }
 
             val settings = datastoreRepository.getSettings()
-            downloadRepository.downloadPlaylist(playlist, settings.downloadOnMetered)
+            val queued = downloadRepository.downloadPlaylist(playlist, settings.downloadOnMetered)
+            if (queued) {
+                _uiState.update { it.copy(isDownloadPending = true) }
+            }
         }
     }
 
