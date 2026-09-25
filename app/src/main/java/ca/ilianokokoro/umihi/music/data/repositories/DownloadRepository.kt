@@ -129,21 +129,12 @@ class DownloadRepository(appContext: Context) {
         workManager.cancelAllWork()
     }
 
-    suspend fun getWorkStatusSummary(playlistId: String): String = withContext(Dispatchers.IO) {
-        val infos = workManager.getWorkInfosForUniqueWork(playlistId).get()
-        if (infos.isEmpty()) return@withContext "No WorkManager jobs found for this playlist."
-
-        infos.joinToString(separator = "\n") { info ->
-            "state=${info.state}, id=${info.id}, attempts=${info.runAttemptCount}, tags=${info.tags.joinToString()}"
-        }
-    }
-
     fun getExistingJobFlow(playlistId: String): Flow<List<WorkInfo>> {
         return workManager.getWorkInfosForUniqueWorkFlow(playlistId)
     }
 
-    private fun getExistingJobs(id: String): List<WorkInfo> {
-        return workManager.getWorkInfosForUniqueWork(id).get().filter {
+    private suspend fun getExistingJobs(id: String): List<WorkInfo> = withContext(Dispatchers.IO) {
+        workManager.getWorkInfosForUniqueWork(id).get().filter {
             it.state == WorkInfo.State.ENQUEUED ||
                     it.state == WorkInfo.State.RUNNING ||
                     it.state == WorkInfo.State.BLOCKED

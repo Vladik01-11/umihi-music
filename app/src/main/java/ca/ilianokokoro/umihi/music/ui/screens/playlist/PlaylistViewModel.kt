@@ -3,7 +3,6 @@ package ca.ilianokokoro.umihi.music.ui.screens.playlist
 
 import android.app.Application
 import android.content.Context
-import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -118,11 +117,15 @@ class PlaylistViewModel(
             val existingJobFlow = downloadRepository.getExistingJobFlow(playlistInfo.id)
 
             existingJobFlow.collect { workInfos ->
-                val workInfo = workInfos.firstOrNull()
+                val workInfo = workInfos.firstOrNull { info ->
+                    info.state == WorkInfo.State.ENQUEUED ||
+                            info.state == WorkInfo.State.RUNNING ||
+                            info.state == WorkInfo.State.BLOCKED
+                }
 
                 _uiState.update {
                     it.copy(
-                        isWorkManagerActive = workInfo?.state == WorkInfo.State.RUNNING
+                        isWorkManagerActive = workInfo != null
                     )
                 }
 
@@ -195,14 +198,6 @@ class PlaylistViewModel(
             val queued = downloadRepository.downloadPlaylist(playlist, settings.downloadOnMetered)
             if (queued) {
                 _uiState.update { it.copy(isDownloadPending = true) }
-            } else {
-                val workStatus = downloadRepository.getWorkStatusSummary(playlist.info.id)
-                printd("Download request ignored for ${playlist.info.title}. WorkManager status: $workStatus")
-                Toast.makeText(
-                    application,
-                    "Download is already queued or running.\n$workStatus",
-                    Toast.LENGTH_LONG
-                ).show()
             }
         }
     }
