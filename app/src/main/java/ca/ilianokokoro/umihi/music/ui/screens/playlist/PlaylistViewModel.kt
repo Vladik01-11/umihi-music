@@ -3,6 +3,7 @@ package ca.ilianokokoro.umihi.music.ui.screens.playlist
 
 import android.app.Application
 import android.content.Context
+import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -194,6 +195,14 @@ class PlaylistViewModel(
             val queued = downloadRepository.downloadPlaylist(playlist, settings.downloadOnMetered)
             if (queued) {
                 _uiState.update { it.copy(isDownloadPending = true) }
+            } else {
+                val workStatus = downloadRepository.getWorkStatusSummary(playlist.info.id)
+                printd("Download request ignored for ${playlist.info.title}. WorkManager status: $workStatus")
+                Toast.makeText(
+                    application,
+                    "Download is already queued or running.\n$workStatus",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }
