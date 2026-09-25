@@ -140,6 +140,9 @@ class PlaylistDownloadWorker(
             // download would fall into the catch block and get treated as
             // interrupted/retried instead of successful.
             withContext(NonCancellable) {
+                playlistRepository.insertPlaylist(
+                    playlist.info.copy(shouldBeDownloaded = false)
+                )
                 NotificationManager.showPlaylistDownloadSuccess(appContext, playlist)
             }
             printd("Playlist download complete")
