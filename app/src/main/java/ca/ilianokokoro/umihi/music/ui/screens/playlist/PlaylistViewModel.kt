@@ -89,22 +89,27 @@ class PlaylistViewModel(
     private fun observeSongDownloads() {
         viewModelScope.launch {
             localPlaylistRepository.observePlaylistById(playlistInfo.id).collect { localPlaylist ->
-                if (localPlaylist != null) {
-                    _uiState.update { currentState ->
-                        val screenState = currentState.screenState
-                        if (screenState is ScreenState.Success) {
-                            currentState.copy(
-                                screenState = screenState.copy(
-                                    playlist = updatePlaylistFrom(
-                                        screenState.playlist,
-                                        localPlaylist
-                                    )
+                _uiState.update { currentState ->
+                    val screenState = currentState.screenState
+                    val mergedScreenState =
+                        if (localPlaylist != null && screenState is ScreenState.Success) {
+                            screenState.copy(
+                                playlist = updatePlaylistFrom(
+                                    screenState.playlist,
+                                    localPlaylist
                                 )
                             )
                         } else {
-                            currentState
+                            screenState
                         }
-                    }
+
+                    currentState.copy(
+                        screenState = mergedScreenState,
+                        isDownloadPending = localPlaylist != null &&
+                                localPlaylist.info.shouldBeDownloaded &&
+                                localPlaylist.songs.isNotEmpty() &&
+                                localPlaylist.songs.any { !it.downloaded }
+                    )
                 }
             }
 
@@ -120,7 +125,7 @@ class PlaylistViewModel(
 
                 _uiState.update {
                     it.copy(
-                        isDownloading =
+                        isWorkManagerActive =
                             workInfo != null &&
                                     (workInfo.state == WorkInfo.State.ENQUEUED ||
                                             workInfo.state == WorkInfo.State.RUNNING ||
