@@ -124,8 +124,13 @@ class PlaylistDownloadWorker(
 
             Result.success()
         } catch (_: CancellationException) {
-            val isUserCancelled = withContext(NonCancellable) {
-                try {
+            // The whole handling must run under NonCancellable: doWork()'s coroutine
+            // is already cancelled at this point, so any suspending call made outside
+            // of this context (including the notification post below) would be
+            // cancelled immediately, silently skipping it and leaving the ongoing
+            // progress notification stuck on screen.
+            withContext(NonCancellable) {
+                val isUserCancelled = try {
                     WorkManager.getInstance(appContext)
                         .getWorkInfoById(params.id)
                         .get()
@@ -133,15 +138,15 @@ class PlaylistDownloadWorker(
                 } catch (e: Exception) {
                     false
                 }
-            }
 
-            if (isUserCancelled) {
-                NotificationManager.showPlaylistDownloadCanceled(appContext, playlist)
-                printd("Playlist download canceled ${playlist.info.title}")
-                Result.failure()
-            } else {
-                printd("Playlist download interrupted, retrying ${playlist.info.title}")
-                Result.retry()
+                if (isUserCancelled) {
+                    NotificationManager.showPlaylistDownloadCanceled(appContext, playlist)
+                    printd("Playlist download canceled ${playlist.info.title}")
+                    Result.failure()
+                } else {
+                    printd("Playlist download interrupted, retrying ${playlist.info.title}")
+                    Result.retry()
+                }
             }
         } catch (e: Exception) {
             NotificationManager.showPlaylistDownloadFailure(appContext, playlist)
