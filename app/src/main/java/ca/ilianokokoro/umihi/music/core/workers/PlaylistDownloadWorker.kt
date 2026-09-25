@@ -39,6 +39,7 @@ class PlaylistDownloadWorker(
     private val songRepository = SongRepository()
 
     private val progressUpdate = Mutex()
+    private var lastProgressNotifyAt = 0L
 
     @OptIn(ExperimentalAtomicApi::class)
     override suspend fun doWork(): Result {
@@ -109,9 +110,21 @@ class PlaylistDownloadWorker(
                             } finally {
                                 progressUpdate.withLock {
                                     val downloaded = downloadedSongs.incrementAndFetch()
-                                    NotificationManager.showPlaylistDownloadProgress(
-                                        appContext, playlist, downloaded, totalSongs
-                                    )
+                                    val now = System.currentTimeMillis()
+                                    // Songs that were already downloaded (or small
+                                    // playlists) can all finish within milliseconds of each
+                                    // other. Posting a notify() for every single one floods
+                                    // the same notification id, and Android can silently
+                                    // drop updates fired in that fast a burst - including
+                                    // the terminal "download complete" one posted right
+                                    // after this loop finishes. Throttle intermediate
+                                    // updates so the final notify() call has a clear slot.
+                                    if (now - lastProgressNotifyAt >= PROGRESS_NOTIFY_MIN_INTERVAL_MS) {
+                                        lastProgressNotifyAt = now
+                                        NotificationManager.showPlaylistDownloadProgress(
+                                            appContext, playlist, downloaded, totalSongs
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -119,7 +132,16 @@ class PlaylistDownloadWorker(
                 }.awaitAll()
             }
 
-            NotificationManager.showPlaylistDownloadSuccess(appContext, playlist)
+            // Wrapped in NonCancellable: if WorkManager decides to stop this worker
+            // (e.g. a constraint like the network type briefly stops being met)
+            // right as the last song finishes, the coroutine's Job can already be
+            // cancelled by the time we get here. Without this, the notify() call
+            // below would be skipped silently and this whole, fully finished
+            // download would fall into the catch block and get treated as
+            // interrupted/retried instead of successful.
+            withContext(NonCancellable) {
+                NotificationManager.showPlaylistDownloadSuccess(appContext, playlist)
+            }
             printd("Playlist download complete")
 
             Result.success()
@@ -149,7 +171,9 @@ class PlaylistDownloadWorker(
                 }
             }
         } catch (e: Exception) {
-            NotificationManager.showPlaylistDownloadFailure(appContext, playlist)
+            withContext(NonCancellable) {
+                NotificationManager.showPlaylistDownloadFailure(appContext, playlist)
+            }
             printe(message = e.toString(), exception = e)
             Result.failure()
         }
@@ -158,5 +182,6 @@ class PlaylistDownloadWorker(
 
     companion object {
         const val PLAYLIST_KEY = "playlist"
+        private const val PROGRESS_NOTIFY_MIN_INTERVAL_MS = 500L
     }
 }
