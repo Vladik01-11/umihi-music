@@ -139,4 +139,9 @@ class DownloadRepository(appContext: Context) {
                     it.state == WorkInfo.State.BLOCKED
         }
     }
+
+    /** Overload that accepts a plain playlist ID string. */
+    fun getExistingJobFlow(playlistId: String): Flow<List<WorkInfo>> {
+        return workManager.getWorkInfosForUniqueWorkFlow(playlistId)
+    }
 }
