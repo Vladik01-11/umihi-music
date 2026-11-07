@@ -746,26 +746,21 @@ object YoutubeDataExtractor {
     }
 
     private fun findMixPanel(root: JsonObject): JsonObject? {
-        val continuationPanel = root["continuationContents"]?.safeObject()
-            ?.get("playlistPanelContinuation")?.safeObject()
+    root["continuationContents"]?.safeObject()
+        ?.get("playlistPanelContinuation")?.safeObject()
+        ?.let { return it }
 
-        if (continuationPanel != null) {
-            return continuationPanel
-        }
+    return findObject(root, "playlistPanelRenderer")
+}
 
-        return root["contents"]?.safeObject()
-            ?.get("singleColumnMusicWatchNextResultsRenderer")?.safeObject()
-            ?.get("tabbedRenderer")?.safeObject()
-            ?.get("watchNextTabbedResultsRenderer")?.safeObject()
-            ?.get("tabs")?.safeArray()
-            ?.firstNotNullOfOrNull { tab ->
-                tab.safeObject()?.get("tabRenderer")?.safeObject()
-                    ?.get("content")?.safeObject()
-                    ?.get("musicQueueRenderer")?.safeObject()
-                    ?.get("content")?.safeObject()
-                    ?.get("playlistPanelRenderer")?.safeObject()
-            }
+private fun findObject(element: JsonElement, key: String): JsonObject? {
+    return when (element) {
+        is JsonObject -> element[key]?.safeObject()
+            ?: element.values.firstNotNullOfOrNull { findObject(it, key) }
+        is JsonArray -> element.firstNotNullOfOrNull { findObject(it, key) }
+        else -> null
     }
+}
 
     private fun parseMixPanelContents(contents: JsonArray?): List<Song> {
         if (contents == null) {
